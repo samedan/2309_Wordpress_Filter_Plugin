@@ -57,15 +57,30 @@ class OurWorldFilterPlugin {
   function wordFilterPage() { ?>
     <div class="wrap">
       <h1>Word Filter</h1>
+
+      <!-- handle on SUBMIT -->
+      <?php 
+          if(isset($_POST['justsubmitted']) && $_POST['justsubmitted'] == "true") { // whatever the browser posted to server
+              $this->handleForm();
+          }
+      ?>
+      <!-- End handle on SUBMIT -->
+
       <form method="POST">
+          <input type="hidden" name="justsubmitted" value="true" /> <!-- Hidden error message at submit-->
+
+          <?php wp_nonce_field('saveFilterWords', 'ourNonce') ?>
           <label for="plugin_words_to_filter"><p>Enter a <strong>comma-separated</strong> list of words to filter from your site's content.</p></label>
           <div class="word-filter__flex-container">
-            <textarea id="plugin_words_to_filter" name="plugin_words_to_filter" placeholder="bad, mean, awful, horrible"></textarea>
+          <textarea name="plugin_words_to_filter" id="plugin_words_to_filter" placeholder="bad, mean, awful, horrible"><?php 
+              echo esc_textarea(get_option('plugin_words_to_filter')) 
+              ?></textarea>
           </div>
           <input type="submit" name="submit" id="submit" class="button button-primary" value="Save Changes" />
       </form>
     </div>
   <?php }
+
 
   // html for the SUBMENU page
   function optionsSubPage() { ?>
@@ -75,6 +90,25 @@ class OurWorldFilterPlugin {
   // CSS custom for the Menu page
   function mainPageAssets() {
       wp_enqueue_style('filterAdminCss', plugin_dir_url(__FILE__).'styles.css');
+  }
+
+  // on Submit
+  function handleForm() {
+    if(isset($_POST['ourNonce']) && wp_verify_nonce($_POST['ourNonce'], 'saveFilterWords') AND current_user_can('manage_options')) { // validate the Nonce field
+      update_option('plugin_words_to_filter', sanitize_text_field($_POST['plugin_words_to_filter'])); // 'options' table in teh DBB, 'plugin_words_to_filter' column
+      ?>
+      <div class="updated">
+        <p>Your filtered words were saved.</p>
+      </div>
+      <?php 
+    } else { ?>
+      <div class="error">
+        <p>Sorry, you do not have permission to perform that action.</p>
+      </div>
+      <?php
+    }
+    
+    
   }
 
 }
