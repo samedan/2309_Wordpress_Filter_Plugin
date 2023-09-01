@@ -14,6 +14,10 @@ if(! defined('ABSPATH')) exit; // Exit if accessed directly
 class OurWorldFilterPlugin {
   function __construct() {
     add_action('admin_menu', array($this, 'ourMenu'));
+    add_action('admin_init', array($this, 'ourSettings')); // settings page
+    if(get_option('plugin_words_to_filter')) { // if words in the form
+      add_filter('the_content', array($this, 'filterLogic'));
+    }
   }
 
   function ourMenu() {
@@ -84,7 +88,17 @@ class OurWorldFilterPlugin {
 
   // html for the SUBMENU page
   function optionsSubPage() { ?>
-    Hello, world from the Options page
+    <div class="wrap">
+      <h1>Word Filter Options</h1>
+      <form action="options.php" method="POST">
+        <?php
+            settings_errors(); // show message on Submit
+            settings_fields('replacementFields');
+            do_settings_sections('word-filter-options');
+            submit_button();
+        ?>
+      </form>
+    </div>
   <?php }
 
   // CSS custom for the Menu page
@@ -110,6 +124,47 @@ class OurWorldFilterPlugin {
     
     
   }
+
+  // actual logic to filer in the constructor
+  function filterLogic($content) {
+      $badWords = explode(',', get_option('plugin_words_to_filter')); // create array of words
+      $badWordsTrimmed = array_map('trim', $badWords);// remove spaces
+      return str_ireplace(
+        $badWordsTrimmed, // array of words to be replaced
+        esc_html(get_option('replacementText', "*****")), // text to replace with, default text if not(*****)
+        $content
+      ); 
+  }
+
+  // Settings page that gets the replacement text to replace with (***)
+  function ourSettings() {
+    add_settings_section(
+      'replacement-text-section', // name of teh field
+      null,
+      null,
+      'word-filter-options' ,// slug 
+    );
+    register_setting('replacementFields', 'replacementText');
+    // add field
+    add_settings_field(
+      'replacement-text',// id
+      'Filtered text',// text on the form
+      array($this, 'replacementFieldHTML'),
+      'word-filter-options',
+      'replacement-text-section'
+    );
+  }
+
+  function replacementFieldHTML() { ?>
+    <input type="text" name="replacementText" value="<?php echo esc_attr(
+      get_option(
+        'replacementText', // value from DBB
+        '***' // fallback value
+        )) ?>"/>
+        <p class="description">Leave blank to simply remove teh filtered words.</p>
+  <?php 
+  }
+
 
 }
 
